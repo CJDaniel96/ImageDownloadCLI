@@ -101,7 +101,7 @@ class ImageDownloader:
     
     def _get_image_list(self, ssh_tunnel, database, image_pools, site, start_date, end_date, **kwargs):
         Logger.info(f'Getting image list from {site} site {kwargs["line_id"]} line')
-        with create_session(ssh_tunnel, database, site) as session:
+        with create_session(ssh_tunnel, database) as session:
             query = session.query(AmrRawData).filter(AmrRawData.create_time.between(start_date, end_date))
             if kwargs['group_type_list']:
                 if kwargs['group_type']:

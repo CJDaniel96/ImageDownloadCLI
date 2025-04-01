@@ -47,82 +47,82 @@
         },
         "image_pool": {
             "Z39": {
-                "ip": "10.5.51.13",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             },
             "Z38": {
-                "ip": "10.5.51.13",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             },
             "Z37": {
-                "ip": "10.5.51.65",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             },
             "Z43": {
-                "ip": "10.5.51.65",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             },
             "Z35": {
-                "ip": "10.5.51.59",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             },
             "Z36": {
-                "ip": "10.5.51.59",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             },
             "Z30": {
-                "ip": "10.5.51.25",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             },
             "Z34": {
-                "ip": "10.5.51.25",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             },
             "Z42": {
-                "ip": "10.5.51.29",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             },
             "Z32": {
-                "ip": "10.5.51.42",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             },
             "Z33": {
-                "ip": "10.5.51.42",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             },
             "S77": {
-                "ip": "10.5.51.49",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             },
             "S75": {
-                "ip": "10.5.51.49",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             },
             "S73": {
-                "ip": "10.5.51.76",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             },
             "S43": {
-                "ip": "10.5.51.76",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             },
             "S19": {
-                "ip": "10.5.51.80",
+                "ip": "10.243.211.35",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             }

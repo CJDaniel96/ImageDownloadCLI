@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 import time
 
 
-def create_session(ssh_tunnel, database, site):
+def create_session(ssh_tunnel, database):
     ssh_address_or_host = ssh_tunnel['ssh_address_or_host']
     ssh_username = ssh_tunnel['ssh_username']
     ssh_password = ssh_tunnel['ssh_password']
