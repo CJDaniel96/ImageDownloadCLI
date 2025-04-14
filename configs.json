@@ -1,4 +1,26 @@
 {
+    "HPH": {
+        "SSHTUNNEL": {
+            "ssh_address_or_host": "",
+            "ssh_username": "",
+            "ssh_password": ""
+        },
+        "database": {
+            "ENGINE": "postgresql",
+            "NAME": "amr",
+            "USER": "postgres",
+            "PASSWORD": "postgres",
+            "HOST": "10.5.1.154",
+            "PORT": 5432
+        },
+        "image_pool": {
+            "V31": {
+                "ip": "10.5.15.14",
+                "port": 8888,
+                "donwload_url_prefix": "imagesinzip"
+            }
+        }
+    },
     "JQ": {
         "SSHTUNNEL": {
             "ssh_address_or_host": "192.168.150.192",
