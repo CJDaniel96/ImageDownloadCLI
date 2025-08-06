@@ -1,9 +1,9 @@
 {
     "HPH": {
         "SSHTUNNEL": {
-            "ssh_address_or_host": "",
-            "ssh_username": "",
-            "ssh_password": ""
+            "ssh_address_or_host": "10.52.1.26",
+            "ssh_username": "Administrator",
+            "ssh_password": "Pb08!@)(UsiVN"
         },
         "database": {
             "ENGINE": "postgresql",
@@ -16,6 +16,26 @@
         "image_pool": {
             "V31": {
                 "ip": "10.5.15.14",
+                "port": 8888,
+                "donwload_url_prefix": "imagesinzip"
+            },
+            "V28": {
+                "ip": "10.5.24.82",
+                "port": 8888,
+                "donwload_url_prefix": "imagesinzip"
+            },
+            "V27": {
+                "ip": "10.5.25.115",
+                "port": 8888,
+                "donwload_url_prefix": "imagesinzip"
+            },
+            "V22": {
+                "ip": "10.5.25.95",
+                "port": 8888,
+                "donwload_url_prefix": "imagesinzip"
+            },
+            "V20": {
+                "ip": "10.5.24.37",
                 "port": 8888,
                 "donwload_url_prefix": "imagesinzip"
             }

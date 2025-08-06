@@ -111,6 +111,10 @@ class ImageDownloader:
                 if kwargs['comp_name']:
                     del kwargs['comp_name']
                 query = query.filter(AmrRawData.comp_name.like(f'{kwargs["component_preffix_name"]}%'))
+            if kwargs['part_number_list']:
+                if kwargs['part_number']:
+                    del kwargs['part_number']
+                query = query.filter(AmrRawData.part_number.in_(kwargs['part_number_list']))
 
             for key, value in kwargs.items():
                 if value and key in AmrRawData.__table__.columns.keys():
