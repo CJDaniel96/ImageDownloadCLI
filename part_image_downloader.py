@@ -156,8 +156,19 @@ class PartNumberAnalyzer:
                 
                 # 應用額外篩選條件
                 for key, value in filters.items():
-                    if value and hasattr(AmrRawData, key):
-                        query = query.filter(getattr(AmrRawData, key) == value)
+                    if hasattr(AmrRawData, key):
+                        # 特別處理布林值條件
+                        if key == 'is_covered':
+                            if value is True:
+                                query = query.filter(getattr(AmrRawData, key) == True)
+                                Logger.info(f"Applied filter: {key} = True")
+                            elif value is False:
+                                query = query.filter(getattr(AmrRawData, key) == False)
+                                Logger.info(f"Applied filter: {key} = False")
+                        # 處理其他條件
+                        elif value is not None:
+                            query = query.filter(getattr(AmrRawData, key) == value)
+                            Logger.info(f"Applied filter: {key} = {value}")
                 
                 # 執行查詢
                 results = query.all()
@@ -399,22 +410,34 @@ class PartImageDownloadManager:
         self.analyzer = PartNumberAnalyzer(config)
         self.downloader = AsyncImageDownloader(config)
     
-    def _display_part_statistics(self, part_stats: pd.Series) -> None:
+    def _display_part_statistics(self, part_stats: pd.Series, filters: dict = None) -> None:
         """顯示 Part Number 統計資訊"""
-        Logger.info("=" * 60)
+        Logger.info("=" * 70)
         Logger.info("PART NUMBER STATISTICS (Sorted by image count DESC)")
-        Logger.info("=" * 60)
-        Logger.info(f"{'Rank':<6} {'Part Number':<20} {'Image Count':<12} {'Percentage':<10}")
-        Logger.info("-" * 60)
+        
+        # 顯示應用的篩選條件
+        if filters:
+            Logger.info("Applied Filters:")
+            for key, value in filters.items():
+                if key == 'is_covered':
+                    covered_status = "Covered" if value else "Not Covered"
+                    Logger.info(f"  - Coverage Status: {covered_status}")
+                else:
+                    Logger.info(f"  - {key}: {value}")
+            Logger.info("-" * 70)
+        
+        Logger.info("=" * 70)
+        Logger.info(f"{'Rank':<6} {'Part Number':<25} {'Image Count':<12} {'Percentage':<10}")
+        Logger.info("-" * 70)
         
         total_images = part_stats.sum()
         for i, (part_num, count) in enumerate(part_stats.items(), 1):
             percentage = (count / total_images) * 100
-            Logger.info(f"{i:<6} {part_num:<20} {count:<12} {percentage:.1f}%")
+            Logger.info(f"{i:<6} {part_num:<25} {count:<12} {percentage:.1f}%")
         
-        Logger.info("-" * 60)
+        Logger.info("-" * 70)
         Logger.info(f"Total: {len(part_stats)} Part Numbers, {total_images} images")
-        Logger.info("=" * 60)
+        Logger.info("=" * 70)
     
     def _get_user_selection(self, part_stats: pd.Series) -> List[str]:
         """取得用戶選擇的 Part Number"""
@@ -599,7 +622,7 @@ class PartImageDownloadManager:
             
             # 計算統計資訊並顯示
             part_stats = part_data.groupby('part_number').size().sort_values(ascending=False)
-            self._display_part_statistics(part_stats)
+            self._display_part_statistics(part_stats, filters)
             
             # 2. 取得用戶選擇
             Logger.info("Step 2: Getting user selection")
@@ -658,6 +681,13 @@ def parse_arguments():
     parser.add_argument('--keep-zip', action='store_true',
                        help='保留原始 ZIP 檔案（預設解壓縮後會刪除）')
     
+    # is_covered 條件 (互斥選項)
+    covered_group = parser.add_mutually_exclusive_group()
+    covered_group.add_argument('--is-covered', action='store_true',
+                             help='只下載被覆蓋的影像 (is_covered = True)')
+    covered_group.add_argument('--not-covered', action='store_true',
+                             help='只下載未被覆蓋的影像 (is_covered = False)')
+    
     # 篩選條件
     parser.add_argument('--product-name', help='產品名稱')
     parser.add_argument('--line-id', help='產線ID')
@@ -695,9 +725,17 @@ async def main():
             if value is not None and key not in [
                 'site', 'start_date', 'end_date', 'images_per_part', 
                 'download_dir', 'max_concurrent', 'no_extract', 'keep_zip',
-                'top_n', 'interactive'
+                'top_n', 'interactive', 'is_covered', 'not_covered'
             ]
         }
+        
+        # 處理 is_covered 條件
+        if args.is_covered:
+            filters['is_covered'] = True
+            Logger.info("Filter applied: Only covered images (is_covered = True)")
+        elif args.not_covered:
+            filters['is_covered'] = False
+            Logger.info("Filter applied: Only non-covered images (is_covered = False)")
         
         # 顯示設定資訊
         Logger.info(f"Extract ZIP files: {config.extract_zip}")
@@ -709,6 +747,12 @@ async def main():
             Logger.info("Interactive selection mode enabled")
         else:
             Logger.info("Download all Part Numbers (default mode)")
+        
+        # 顯示篩選條件摘要
+        if filters:
+            Logger.info("Applied filters:")
+            for key, value in filters.items():
+                Logger.info(f"  {key}: {value}")
         
         # 執行下載
         manager = PartImageDownloadManager(config)
