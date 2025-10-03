@@ -133,7 +133,7 @@ def main():
             continue
         
         # 解析產品名稱，提取公司代號和產品號
-        product_code = parse_product_name(rec.product_name)
+        product_code = rec.product_name
         
         # 提取光源資訊
         light = f.stem.rsplit('_', 1)[-1]

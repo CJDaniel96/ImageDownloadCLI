@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 """
-依照product_name與元件名稱分類影像檔案
- 
+依照part_number、product_name與元件名稱分類影像檔案
+
 將來源資料夾中符合副檔名的影像檔案，
 1. 根據檔名開頭14位時間戳，拼出相對路徑: YYYY-MM-DD/timestamp/filename
-2. 以timestamp(對應資料庫中image_path)查詢AmrRawData，取得product_name
+2. 以timestamp(對應資料庫中image_path)查詢AmrRawData，取得part_number和product_name
 3. 以正則解析檔名中@後的元件名稱
-4. 從product_name中提取公司代號和產品號（忽略迭代號碼）
-5. 將影像搬移或複製至 dest_root/[company_code]_[product_code]_[component]_[light] 下
- 
+4. 將影像搬移或複製至 dest_root/part_number/product_name/comp 多階層子資料夾下
+
 使用方式:
-    python classify_images.py --config configs.json --project HPH <source_dir> <dest_root> [-c]
- 
+    python split_images_by_partnumber_fullproduct_comp.py --config configs.json --project HPH <source_dir> <dest_root> [-c]
+
 依賴: sessions.py, amr_info.py 同目錄下
 """
 import os
@@ -27,7 +26,7 @@ from database.amr_info import AmrRawData
  
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='依照product_name與元件名稱分類影像檔案'
+        description='依照part_number、product_name與元件名稱分類影像檔案'
     )
     parser.add_argument(
         '--config',
@@ -66,24 +65,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def parse_product_name(product_name):
-    """
-    解析產品名稱，提取公司代號和產品號
-    例: 1005-700700-00B -> 公司代號: 1005, 產品號: 700700
-    例: 1005-251700-01B -> 公司代號: 1005, 產品號: 251700
-    """
-    # 使用正則表達式解析 company_code-product_number-iteration
-    pattern = r'^(\d+)-(\d+)-\w+$'
-    match = re.match(pattern, product_name)
-    
-    if match:
-        company_code = match.group(1)
-        product_code = match.group(2)
-        return f"{company_code}_{product_code}"
-    else:
-        print(f"警告: 無法解析產品名稱格式 -> {product_name}")
-        # 如果解析失敗，返回原始產品名稱
-        return product_name.replace('-', '_')
  
  
 def main():
@@ -122,24 +103,21 @@ def main():
             continue
         comp = m_comp.group(1)
 
-        # 查 DB 取得 product_name
+        # 查 DB 取得 part_number 和 product_name
         rec = session.query(AmrRawData).filter(
             AmrRawData.create_time >= date_folder,
             AmrRawData.line_id == 'V31',
             AmrRawData.image_path == relative_path
         ).first()
-        if not rec or not rec.product_name:
-            print(f"警告: 找不到 product_name (image_path={ts}) -> {relative_path}")
+        if not rec or not rec.part_number or not rec.product_name:
+            print(f"警告: 找不到 part_number 或 product_name (image_path={ts}) -> {relative_path}")
             continue
-        
-        # 解析產品名稱，提取公司代號和產品號
-        product_code = parse_product_name(rec.product_name)
-        
-        # 提取光源資訊
-        light = f.stem.rsplit('_', 1)[-1]
 
-        # 構造分類資料夾：company_product_component_light
-        dest_dir = Path(args.dest_root) / f"{product_code}_{comp}_{light}"
+        part_number = rec.part_number
+        product_name = rec.product_name
+
+        # 構造分類資料夾：part_number/product_name/comp
+        dest_dir = Path(args.dest_root) / part_number / product_name / comp
         dest_dir.mkdir(parents=True, exist_ok=True)
 
         # 移動或複製

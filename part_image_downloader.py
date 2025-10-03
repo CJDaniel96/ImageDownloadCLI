@@ -419,9 +419,11 @@ class PartImageDownloadManager:
         if filters:
             Logger.info("Applied Filters:")
             for key, value in filters.items():
-                if key == 'is_covered':
-                    covered_status = "Covered" if value else "Not Covered"
-                    Logger.info(f"  - Coverage Status: {covered_status}")
+                if isinstance(value, bool):
+                    status = "Yes" if value else "No"
+                    Logger.info(f"  - {key}: {status}")
+                elif value is None:
+                    Logger.info(f"  - {key}: NULL")
                 else:
                     Logger.info(f"  - {key}: {value}")
             Logger.info("-" * 70)
@@ -650,14 +652,38 @@ class PartImageDownloadManager:
 
 def parse_arguments():
     """解析命令列參數"""
-    parser = argparse.ArgumentParser(description='Part Number 影像批次下載器')
+    parser = argparse.ArgumentParser(
+        description='Part Number 影像批次下載器',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+篩選條件範例:
+  --filter aoi_defect=NG                     # 篩選特定 AOI 缺陷
+  --filter is_covered=true                   # 篩選被覆蓋的元件
+  --filter station_id=ST01                   # 篩選特定站點
+  --filter product_name=ProductA             # 篩選特定產品
+  --filter line_id=L001 --filter factory=F1 # 多個篩選條件
+
+支援的值類型:
+  字串: product_name=ProductA
+  數字: station_id=123
+  布林: is_covered=true/false
+  空值: comp_name=null
+
+查看可用欄位:
+  --list-fields                              # 顯示所有可用的資料庫欄位
+        """
+    )
+    
+    # 便利功能
+    parser.add_argument('--list-fields', action='store_true',
+                       help='顯示所有可用的資料庫欄位並退出')
     
     # 必要參數
-    parser.add_argument('--site', required=True, 
+    parser.add_argument('--site', 
                        help='站點名稱 (例如：JQ, ZJ, NK, HZ)')
-    parser.add_argument('--start-date', required=True,
+    parser.add_argument('--start-date',
                        help='開始日期 (格式：YYYY-MM-DD)')
-    parser.add_argument('--end-date', required=True,
+    parser.add_argument('--end-date',
                        help='結束日期 (格式：YYYY-MM-DD)')
     
     # 可選參數
@@ -681,22 +707,126 @@ def parse_arguments():
     parser.add_argument('--keep-zip', action='store_true',
                        help='保留原始 ZIP 檔案（預設解壓縮後會刪除）')
     
-    # is_covered 條件 (互斥選項)
-    covered_group = parser.add_mutually_exclusive_group()
-    covered_group.add_argument('--is-covered', action='store_true',
-                             help='只下載被覆蓋的影像 (is_covered = True)')
-    covered_group.add_argument('--not-covered', action='store_true',
-                             help='只下載未被覆蓋的影像 (is_covered = False)')
+    # 通用篩選條件參數
+    parser.add_argument('--filter', action='append', metavar='KEY=VALUE',
+                       help='資料庫篩選條件 (格式: 欄位名=值)，可重複使用')
     
-    # 篩選條件
-    parser.add_argument('--product-name', help='產品名稱')
-    parser.add_argument('--line-id', help='產線ID')
-    parser.add_argument('--station-id', help='站點ID')
-    parser.add_argument('--factory', help='工廠名稱')
-    parser.add_argument('--aoi-id', help='AOI ID')
-    parser.add_argument('--group-type', help='群組類型')
+    # 常用的快捷篩選選項（向後相容）
+    parser.add_argument('--is-covered', action='store_true',
+                       help='快捷選項：只下載被覆蓋的影像 (等同於 --filter is_covered=true)')
+    parser.add_argument('--not-covered', action='store_true',
+                       help='快捷選項：只下載未被覆蓋的影像 (等同於 --filter is_covered=false)')
     
     return parser.parse_args()
+
+
+def show_available_fields():
+    """顯示所有可用的資料庫欄位"""
+    try:
+        # 獲取 AmrRawData 模型的所有欄位
+        columns = AmrRawData.__table__.columns.keys()
+        
+        print("=" * 60)
+        print("AVAILABLE DATABASE FIELDS FOR FILTERING")
+        print("=" * 60)
+        print(f"Total: {len(columns)} fields available")
+        print("-" * 60)
+        
+        # 按字母順序排序並分欄顯示
+        sorted_columns = sorted(columns)
+        for i, column in enumerate(sorted_columns, 1):
+            print(f"{i:2d}. {column}")
+        
+        print("-" * 60)
+        print("Usage examples:")
+        print("  --filter product_name=ProductA")
+        print("  --filter is_covered=true")
+        print("  --filter station_id=123")
+        print("  --filter aoi_defect=NG")
+        print("=" * 60)
+        
+    except Exception as e:
+        print(f"Error retrieving database fields: {e}")
+        print("Make sure the database models are properly imported.")
+
+
+def parse_filter_value(key: str, value: str):
+    """解析篩選條件的值，自動轉換型別"""
+    # 處理布林值
+    if value.lower() in ['true', 'false']:
+        return value.lower() == 'true'
+    
+    # 處理數值
+    if value.isdigit():
+        return int(value)
+    
+    # 嘗試轉換為浮點數
+    try:
+        if '.' in value:
+            return float(value)
+    except ValueError:
+        pass
+    
+    # 處理 None 值
+    if value.lower() in ['none', 'null']:
+        return None
+    
+    # 預設為字串
+    return value
+
+
+def validate_filter_key(key: str) -> bool:
+    """驗證篩選條件的欄位是否存在於資料庫模型中"""
+    return hasattr(AmrRawData, key)
+
+
+def parse_filters(args) -> dict:
+    """解析篩選條件參數"""
+    filters = {}
+    
+    # 處理通用 --filter 參數
+    if args.filter:
+        for filter_str in args.filter:
+            try:
+                if '=' not in filter_str:
+                    Logger.warning(f"Invalid filter format: {filter_str} (expected KEY=VALUE)")
+                    continue
+                
+                key, value = filter_str.split('=', 1)
+                key = key.strip()
+                value = value.strip()
+                
+                if not key:
+                    Logger.warning(f"Empty filter key in: {filter_str}")
+                    continue
+                
+                # 驗證欄位是否存在
+                if not validate_filter_key(key):
+                    Logger.warning(f"Unknown filter field: {key} (skipped)")
+                    continue
+                
+                # 解析值
+                parsed_value = parse_filter_value(key, value)
+                filters[key] = parsed_value
+                
+                Logger.info(f"Parsed filter: {key} = {parsed_value} (type: {type(parsed_value).__name__})")
+                
+            except ValueError as e:
+                Logger.warning(f"Error parsing filter '{filter_str}': {e}")
+                continue
+    
+    # 處理快捷選項（向後相容）
+    if args.is_covered and args.not_covered:
+        Logger.error("Cannot use both --is-covered and --not-covered")
+        sys.exit(1)
+    elif args.is_covered:
+        filters['is_covered'] = True
+        Logger.info("Applied shortcut: is_covered = True")
+    elif args.not_covered:
+        filters['is_covered'] = False
+        Logger.info("Applied shortcut: is_covered = False")
+    
+    return filters
 
 
 async def main():
@@ -704,6 +834,25 @@ async def main():
     try:
         # 解析參數
         args = parse_arguments()
+        
+        # 如果要求顯示欄位列表，直接顯示並退出
+        if args.list_fields:
+            show_available_fields()
+            return
+        
+        # 檢查必要參數
+        if not args.site:
+            Logger.error("Missing required argument: --site")
+            print("Use --help for usage information")
+            sys.exit(1)
+        if not args.start_date:
+            Logger.error("Missing required argument: --start-date")
+            print("Use --help for usage information")
+            sys.exit(1)
+        if not args.end_date:
+            Logger.error("Missing required argument: --end-date")
+            print("Use --help for usage information")
+            sys.exit(1)
         
         # 建立設定
         config = DownloadConfig(
@@ -719,23 +868,8 @@ async def main():
             interactive=args.interactive  # 互動式選擇
         )
         
-        # 準備篩選條件
-        filters = {
-            key: value for key, value in vars(args).items()
-            if value is not None and key not in [
-                'site', 'start_date', 'end_date', 'images_per_part', 
-                'download_dir', 'max_concurrent', 'no_extract', 'keep_zip',
-                'top_n', 'interactive', 'is_covered', 'not_covered'
-            ]
-        }
-        
-        # 處理 is_covered 條件
-        if args.is_covered:
-            filters['is_covered'] = True
-            Logger.info("Filter applied: Only covered images (is_covered = True)")
-        elif args.not_covered:
-            filters['is_covered'] = False
-            Logger.info("Filter applied: Only non-covered images (is_covered = False)")
+        # 解析篩選條件
+        filters = parse_filters(args)
         
         # 顯示設定資訊
         Logger.info(f"Extract ZIP files: {config.extract_zip}")
@@ -753,6 +887,8 @@ async def main():
             Logger.info("Applied filters:")
             for key, value in filters.items():
                 Logger.info(f"  {key}: {value}")
+        else:
+            Logger.info("No filters applied")
         
         # 執行下載
         manager = PartImageDownloadManager(config)

@@ -75,8 +75,8 @@
     },
     "ZJ": {
         "SSHTUNNEL": {
-            "ssh_address_or_host": "192.168.53.207",
-            "ssh_username": "Administrator",
+            "ssh_address_or_host": "10.243.211.35",
+            "ssh_username": "user",
             "ssh_password": "SMDi4.0AP"
         },
         "database": {
